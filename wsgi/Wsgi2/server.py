@@ -1,7 +1,7 @@
 import socket
 #python2 version
 #import StringIO
-from io import StringIO
+import io
 import sys
 
 
@@ -42,7 +42,7 @@ class WSGIServer(object):
             self.handle_one_request()
 
     def handle_one_request(self):
-        self.request_data = request_data = self.client_connection.recv(1024)
+        self.request_data = request_data = str(self.client_connection.recv(1024))
         # Print formatted request data a la 'curl -v'
         print(''.join(
             '< {line}\n'.format(line=line)
@@ -67,8 +67,8 @@ class WSGIServer(object):
         # Break down the request line into components
         (self.request_method,  # GET
          self.path,  # /hello
-         self.request_version  # HTTP/1.1
-         ) = request_line.split()
+         self.request_version,  # HTTP/1.1,
+         ) = request_line.split()[0:3]
 
     def get_environ(self):
         env = {}
@@ -79,7 +79,7 @@ class WSGIServer(object):
         # Required WSGI variables
         env['wsgi.version'] = (1, 0)
         env['wsgi.url_scheme'] = 'http'
-        env['wsgi.input'] = StringIO.StringIO(self.request_data)
+        env['wsgi.input'] = io.StringIO(self.request_data)
         env['wsgi.errors'] = sys.stderr
         env['wsgi.multithread'] = False
         env['wsgi.multiprocess'] = False
@@ -117,6 +117,7 @@ class WSGIServer(object):
                 '> {line}\n'.format(line=line)
                 for line in response.splitlines()
             ))
+            response=bytes(response, encoding="utf8")
             self.client_connection.sendall(response)
         finally:
             self.client_connection.close()
